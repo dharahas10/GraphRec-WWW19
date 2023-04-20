@@ -1,0 +1,22 @@
+**/.DS_Store
+**/*.pyc
+__pycache__
+
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# If you are using PyCharm # 
+.idea
+
+# Visual Studio Code # 
+.vscode
+.history
+
+
+# project
+/raw
+logs
+
+src/test.py
+memory_reports

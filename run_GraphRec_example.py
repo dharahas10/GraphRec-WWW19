@@ -1,24 +1,28 @@
+import argparse
+import datetime
+import logging
+import logging.config
+import os
+import pickle
+import random
+import time
+from collections import defaultdict
+from datetime import datetime
+from math import sqrt
+
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn import init
-from torch.autograd import Variable
-import pickle
-import numpy as np
-import time
-import random
-from collections import defaultdict
-from UV_Encoders import UV_Encoder
-from UV_Aggregators import UV_Aggregator
-from Social_Encoders import Social_Encoder
-from Social_Aggregators import Social_Aggregator
 import torch.nn.functional as F
 import torch.utils.data
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import mean_absolute_error
-from math import sqrt
-import datetime
-import argparse
-import os
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+from torch.autograd import Variable
+from torch.nn import init
+
+from Social_Aggregators import Social_Aggregator
+from Social_Encoders import Social_Encoder
+from UV_Aggregators import UV_Aggregator
+from UV_Encoders import UV_Encoder
 
 """
 GraphRec: Graph Neural Networks for Social Recommendation. 
@@ -36,7 +40,21 @@ If you use this code, please cite our paper:
 ```
 
 """
+LOG_DIR = "./logs"
 
+def setup_logging():
+    """Load logging configuration"""
+    config_path = "./config/logging.ini"
+
+    if not os.path.isdir(LOG_DIR):
+        os.makedirs(LOG_DIR)
+
+    timestamp = datetime.now().strftime("%y%m%d-%H:%M:%S")
+    logging.config.fileConfig(
+        config_path,
+        disable_existing_loggers=False,
+        defaults={"logfilename": f"{LOG_DIR}/{timestamp}.log"},
+    )
 
 class GraphRec(nn.Module):
 
@@ -85,6 +103,7 @@ class GraphRec(nn.Module):
 
 
 def train(model, device, train_loader, optimizer, epoch, best_rmse, best_mae):
+    log = logging.getLogger(__name__)
     model.train()
     running_loss = 0.0
     for i, data in enumerate(train_loader, 0):
@@ -95,7 +114,7 @@ def train(model, device, train_loader, optimizer, epoch, best_rmse, best_mae):
         optimizer.step()
         running_loss += loss.item()
         if i % 100 == 0:
-            print('[%d, %5d] loss: %.3f, The best rmse/mae: %.6f / %.6f' % (
+            log.info('[%d, %5d] loss: %.3f, The best rmse/mae: %.6f / %.6f' % (
                 epoch, i, running_loss / 100, best_rmse, best_mae))
             running_loss = 0.0
     return 0
@@ -119,6 +138,7 @@ def test(model, device, test_loader):
 
 
 def main():
+    log = logging.getLogger(__name__)
     # Training settings
     parser = argparse.ArgumentParser(description='Social Recommendation: GraphRec model')
     parser.add_argument('--batch_size', type=int, default=128, metavar='N', help='input batch size for training')
@@ -135,7 +155,8 @@ def main():
     device = torch.device("cuda" if use_cuda else "cpu")
 
     embed_dim = args.embed_dim
-    dir_data = './data/toy_dataset'
+    # dir_data = './data/toy_dataset'
+    dir_data = './data/yelp'
 
     path_data = dir_data + ".pickle"
     data_file = open(path_data, 'rb')
@@ -203,11 +224,12 @@ def main():
             endure_count = 0
         else:
             endure_count += 1
-        print("rmse: %.4f, mae:%.4f " % (expected_rmse, mae))
+        log.info("rmse: %.4f, mae:%.4f " % (expected_rmse, mae))
 
         if endure_count > 5:
             break
 
 
 if __name__ == "__main__":
+    setup_logging()
     main()
